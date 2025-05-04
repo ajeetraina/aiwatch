@@ -1,5 +1,6 @@
 # AIWatch - AI Model Management and Observability
 
+<img width="1206" alt="image" src="https://github.com/user-attachments/assets/349aecf6-bd94-47a4-810f-2744d92a997a" />
 
 
 ## Overview
