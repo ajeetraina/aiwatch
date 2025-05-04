@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ajeetraina/genai-app-demo/pkg/metrics"
+	"github.com/ajeetraina/aiwatch/pkg/metrics"
 )
 
 // RequestLogger adds request logging middleware
