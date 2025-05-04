@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ajeetraina/genai-app-demo/pkg/middleware"
-	"github.com/ajeetraina/genai-app-demo/pkg/tracing"
+	"github.com/ajeetraina/aiwatch/pkg/middleware"
 	"github.com/ajeetraina/aiwatch/pkg/models"
+	"github.com/ajeetraina/aiwatch/pkg/tracing"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
