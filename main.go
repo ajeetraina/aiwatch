@@ -81,7 +81,7 @@ type MetricsSummary struct {
 var (
 	requestCounter = promautoFactory.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "genai_app_http_requests_total",
+			Name: "aiwatch_http_requests_total",
 			Help: "Total number of HTTP requests",
 		},
 		[]string{"method", "endpoint", "status"},
@@ -89,7 +89,7 @@ var (
 	
 	requestDuration = promautoFactory.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "genai_app_http_request_duration_seconds",
+			Name:    "aiwatch_http_request_duration_seconds",
 			Help:    "HTTP request duration in seconds",
 			Buckets: prometheus.DefBuckets,
 		},
@@ -98,7 +98,7 @@ var (
 	
 	chatTokensCounter = promautoFactory.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "genai_app_chat_tokens_total",
+			Name: "aiwatch_chat_tokens_total",
 			Help: "Total number of tokens processed in chat",
 		},
 		[]string{"direction", "model"},
@@ -106,7 +106,7 @@ var (
 	
 	modelLatency = promautoFactory.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "genai_app_model_latency_seconds",
+			Name:    "aiwatch_model_latency_seconds",
 			Help:    "Model response time in seconds",
 			Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 20, 30, 60},
 		},
@@ -115,7 +115,7 @@ var (
 	
 	activeRequests = promautoFactory.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "genai_app_active_requests",
+			Name: "aiwatch_active_requests",
 			Help: "Number of currently active requests",
 		},
 	)
@@ -123,7 +123,7 @@ var (
 	// Add error counter metric
 	errorCounter = promautoFactory.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "genai_app_errors_total",
+			Name: "aiwatch_errors_total",
 			Help: "Total number of errors",
 		},
 		[]string{"type"},
@@ -132,7 +132,7 @@ var (
 	// Add first token latency metric
 	firstTokenLatency = promautoFactory.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "genai_app_first_token_latency_seconds",
+			Name:    "aiwatch_first_token_latency_seconds",
 			Help:    "Time to first token in seconds",
 			Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2, 5},
 		},
@@ -142,7 +142,7 @@ var (
 	// LlamaCpp metrics
 	llamacppContextSize = promautoFactory.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "genai_app_llamacpp_context_size",
+			Name: "aiwatch_llamacpp_context_size",
 			Help: "Context window size in tokens for llama.cpp models",
 		},
 		[]string{"model"},
@@ -150,7 +150,7 @@ var (
 
 	llamacppPromptEvalTime = promautoFactory.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "genai_app_llamacpp_prompt_eval_seconds",
+			Name:    "aiwatch_llamacpp_prompt_eval_seconds",
 			Help:    "Time spent evaluating the prompt in seconds",
 			Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10},
 		},
@@ -159,7 +159,7 @@ var (
 
 	llamacppTokensPerSecond = promautoFactory.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "genai_app_llamacpp_tokens_per_second",
+			Name: "aiwatch_llamacpp_tokens_per_second",
 			Help: "Tokens generated per second",
 		},
 		[]string{"model"},
@@ -167,7 +167,7 @@ var (
 
 	llamacppMemoryPerToken = promautoFactory.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "genai_app_llamacpp_memory_per_token_bytes",
+			Name: "aiwatch_llamacpp_memory_per_token_bytes",
 			Help: "Memory usage per token in bytes",
 		},
 		[]string{"model"},
@@ -175,7 +175,7 @@ var (
 
 	llamacppThreadsUsed = promautoFactory.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "genai_app_llamacpp_threads_used",
+			Name: "aiwatch_llamacpp_threads_used",
 			Help: "Number of threads used for inference",
 		},
 		[]string{"model"},
@@ -183,7 +183,7 @@ var (
 
 	llamacppBatchSize = promautoFactory.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "genai_app_llamacpp_batch_size",
+			Name: "aiwatch_llamacpp_batch_size",
 			Help: "Batch size used for inference",
 		},
 		[]string{"model"},
@@ -313,7 +313,7 @@ func getLlamaCppMetrics(model string) *LlamaCppMetrics {
 }
 
 func main() {
-	log.Println("Starting GenAI App with observability")
+	log.Println("Starting AIWatch with observability")
 
 	// Get configuration from environment
 	baseURL := os.Getenv("BASE_URL")
@@ -328,7 +328,7 @@ func main() {
 		otlpEndpoint := getEnvOrDefault("OTLP_ENDPOINT", "jaeger:4318")
 		log.Printf("Setting up tracing with endpoint: %s", otlpEndpoint)
 
-		cleanup, err := tracing.SetupTracing("genai-app", otlpEndpoint)
+		cleanup, err := tracing.SetupTracing("aiwatch", otlpEndpoint)
 		if err != nil {
 			log.Printf("Failed to set up tracing: %v", err)
 		} else {
