@@ -6,3 +6,4 @@ export { SimplifiedMetrics } from './SimplifiedMetrics';
 export { ModelInfoCard } from './ModelInfoCard';
 export { LlamaCppMetricsPanel } from './LlamaCppMetricsPanel';
 export { Header } from './Header';
+export { ModelSelector } from './ModelSelector';
