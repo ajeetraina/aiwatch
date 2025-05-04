@@ -32,6 +32,9 @@ RUN --mount=type=cache,target=/var/cache/apk \
     apk --update add \
         ca-certificates \
         tzdata \
+        docker-cli \
+        curl \
+        wget \
         && \
         update-ca-certificates
 
@@ -44,6 +47,11 @@ RUN adduser \
     --no-create-home \
     --uid "${UID}" \
     appuser
+
+# Add appuser to the docker group - create group if it doesn't exist
+RUN grep -q "^docker:" /etc/group || addgroup -S docker
+RUN addgroup appuser docker
+
 USER appuser
 
 COPY --from=backend-build /bin/server /bin/
