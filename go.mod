@@ -1,4 +1,4 @@
-module github.com/ajeetraina/genai-app-demo
+module github.com/ajeetraina/aiwatch
 
 go 1.23.4
 
