@@ -8,24 +8,30 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// MetricsMiddleware adds Prometheus metrics to HTTP requests
+// MetricsMiddleware adds metrics collection middleware
 func MetricsMiddleware(requestCounter *prometheus.CounterVec, requestDuration *prometheus.HistogramVec, activeRequests prometheus.Gauge) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
+			
+			// Create a custom response writer to capture the status code
+			writer := &responseWriter{w, http.StatusOK}
+			
+			// Increment active requests counter
 			activeRequests.Inc()
-			defer activeRequests.Dec()
-
-			// Wrap the response writer to capture status code
-			rww := &responseWriterWrapper{w: w, statusCode: http.StatusOK}
-
+			
 			// Call the next handler
-			next.ServeHTTP(rww, r)
-
+			next.ServeHTTP(writer, r)
+			
+			// Decrement active requests counter
+			activeRequests.Dec()
+			
+			// Calculate request duration
+			duration := time.Since(start)
+			
 			// Record metrics
-			duration := time.Since(start).Seconds()
-			requestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration)
-			requestCounter.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(rww.statusCode)).Inc()
+			requestCounter.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(writer.status)).Inc()
+			requestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration.Seconds())
 		})
 	}
 }
