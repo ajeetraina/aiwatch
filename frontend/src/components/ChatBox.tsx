@@ -4,6 +4,7 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { SimplifiedMetrics } from './SimplifiedMetrics';
 import { ModelInfoCard } from './ModelInfoCard';
+import { ModelSelector } from './ModelSelector';
 
 export default function ChatBox() {
   const [input, setInput] = useState('');
@@ -14,6 +15,7 @@ export default function ChatBox() {
   const [showModelInfo, setShowModelInfo] = useState(false); // Toggle for model info panel
   const [messageMetrics, setMessageMetrics] = useState<Record<string, MessageMetrics>>({});
   const [modelInfo, setModelInfo] = useState<ModelMetadata | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>('');
 
   // Load messages from local storage on initial render
   useEffect(() => {
@@ -42,11 +44,17 @@ export default function ChatBox() {
         const data = await response.json();
         if (data.model_info) {
           setModelInfo(data.model_info);
+          setSelectedModel(data.model_info.model); // Set the default model
         }
       }
     } catch (e) {
       console.error('Failed to fetch model info:', e);
     }
+  };
+
+  const handleSelectModel = (modelName: string) => {
+    setSelectedModel(modelName);
+    console.log('Selected model:', modelName);
   };
 
   const handleSendMessage = async () => {
@@ -86,11 +94,15 @@ export default function ChatBox() {
       setMessages(prev => [...prev, userMessage]);
       console.log('User message with metrics:', userMessage); // Debug log
 
-      // Send message to the backend
+      // Send message to the backend with selected model
       const response = await fetch('http://localhost:8080/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: currentInput, messages: messages }),
+        body: JSON.stringify({ 
+          message: currentInput, 
+          messages: messages,
+          model: selectedModel 
+        }),
       });
 
       if (response.status !== 200) {
@@ -291,6 +303,14 @@ export default function ChatBox() {
           <ModelInfoCard modelInfo={modelInfo} />
         </div>
       )}
+      
+      {/* Display model selector */}
+      <div className="px-3 py-2 border-b dark:border-gray-800">
+        <div className="flex items-center">
+          <span className="text-sm mr-2 text-gray-700 dark:text-gray-300">Model:</span>
+          <ModelSelector selectedModel={selectedModel} onSelectModel={handleSelectModel} />
+        </div>
+      </div>
       
       {/* Use the simplified metrics component with collapsed/expandable functionality */}
       {showMetrics && <SimplifiedMetrics isVisible={showMetrics} messages={messages} />}
