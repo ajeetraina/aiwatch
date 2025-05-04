@@ -15,6 +15,7 @@ import (
 
 	"github.com/ajeetraina/genai-app-demo/pkg/middleware"
 	"github.com/ajeetraina/genai-app-demo/pkg/tracing"
+	"github.com/ajeetraina/aiwatch/pkg/models"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -36,6 +37,7 @@ type ChatRequest struct {
 	Messages []Message `json:"messages"`
 	Message  string    `json:"message"`
 	Format   string    `json:"format,omitempty"` // Optional format parameter
+	Model    string    `json:"model,omitempty"`  // Optional model selection parameter
 }
 
 type MetricLog struct {
@@ -315,7 +317,7 @@ func main() {
 
 	// Get configuration from environment
 	baseURL := os.Getenv("BASE_URL")
-	model := os.Getenv("MODEL")
+	defaultModel := os.Getenv("MODEL")
 	apiKey := os.Getenv("API_KEY")
 
 	// Tracing setup
@@ -365,6 +367,25 @@ func main() {
 		}
 	})
 
+	// Add models listing endpoint
+	mux.HandleFunc("/models", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		models.HandleListModels(w, r)
+	})
+
 	// Add health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -372,29 +393,29 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		
 		// Check if the model is a llama.cpp model
-		isLlamaCpp := strings.Contains(strings.ToLower(model), "llama") || 
+		isLlamaCpp := strings.Contains(strings.ToLower(defaultModel), "llama") || 
 			            strings.Contains(baseURL, "llama.cpp")
 		
 		// Add model information to the health response
 		modelInfo := map[string]interface{}{
-			"model": model,
+			"model": defaultModel,
 		}
 		
 		// Add context window size if available
 		if isLlamaCpp {
 			modelInfo["modelType"] = "llama.cpp"
-			contextSize := int(getGaugeValueWithLabels(llamacppContextSize, model))
+			contextSize := int(getGaugeValueWithLabels(llamacppContextSize, defaultModel))
 			if contextSize > 0 {
 				modelInfo["contextWindow"] = contextSize
 			} else {
 				// Default context window for the model if not set yet
-				if strings.Contains(model, "1B") {
+				if strings.Contains(defaultModel, "1B") {
 					modelInfo["contextWindow"] = 2048
-				} else if strings.Contains(model, "7B") {
+				} else if strings.Contains(defaultModel, "7B") {
 					modelInfo["contextWindow"] = 4096
-				} else if strings.Contains(model, "13B") {
+				} else if strings.Contains(defaultModel, "13B") {
 					modelInfo["contextWindow"] = 4096
-				} else if strings.Contains(model, "70B") {
+				} else if strings.Contains(defaultModel, "70B") {
 					modelInfo["contextWindow"] = 8192 
 				} else {
 					modelInfo["contextWindow"] = 4096 // Default
@@ -427,17 +448,17 @@ func main() {
 
 		// Get llama.cpp metrics if the model is a llama.cpp model
 		var llamaCppMetrics *LlamaCppMetrics
-		if strings.Contains(strings.ToLower(model), "llama") || 
+		if strings.Contains(strings.ToLower(defaultModel), "llama") || 
 		   strings.Contains(baseURL, "llama.cpp") {
-			llamaCppMetrics = getLlamaCppMetrics(model)
+			llamaCppMetrics = getLlamaCppMetrics(defaultModel)
 		}
 
 		// Create a metrics summary by reading from Prometheus metrics
 		summary := MetricsSummary{
 			TotalRequests:      getCounterValue(requestCounter),
 			AverageResponseTime: getAverageResponseTime(requestDuration),
-			TokensGenerated:    getCounterValue(chatTokensCounter, "output", model),
-			TokensProcessed:    getCounterValue(chatTokensCounter, "input", model),
+			TokensGenerated:    getCounterValue(chatTokensCounter, "output", defaultModel),
+			TokensProcessed:    getCounterValue(chatTokensCounter, "input", defaultModel),
 			ActiveUsers:        getGaugeValue(activeRequests),
 			ErrorRate:          calculateErrorRate(),
 			LlamaCppMetrics:    llamaCppMetrics,
@@ -467,7 +488,7 @@ func main() {
 		// Log the metrics using Prometheus (don't increment counters as they are already tracked)
 		// Just log the first token latency which isn't already tracked
 		if metricLog.FirstTokenMs > 0 {
-			firstTokenLatency.WithLabelValues(model).Observe(metricLog.FirstTokenMs / 1000.0)
+			firstTokenLatency.WithLabelValues(defaultModel).Observe(metricLog.FirstTokenMs / 1000.0)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -492,12 +513,12 @@ func main() {
 		}
 
 		// Record all llama.cpp metrics
-		llamacppContextSize.WithLabelValues(model).Set(float64(llamaCppLog.ContextSize))
-		llamacppPromptEvalTime.WithLabelValues(model).Observe(llamaCppLog.PromptEvalTime / 1000.0) // Convert ms to seconds
-		llamacppTokensPerSecond.WithLabelValues(model).Set(llamaCppLog.TokensPerSecond)
-		llamacppMemoryPerToken.WithLabelValues(model).Set(llamaCppLog.MemoryPerToken)
-		llamacppThreadsUsed.WithLabelValues(model).Set(float64(llamaCppLog.ThreadsUsed))
-		llamacppBatchSize.WithLabelValues(model).Set(float64(llamaCppLog.BatchSize))
+		llamacppContextSize.WithLabelValues(defaultModel).Set(float64(llamaCppLog.ContextSize))
+		llamacppPromptEvalTime.WithLabelValues(defaultModel).Observe(llamaCppLog.PromptEvalTime / 1000.0) // Convert ms to seconds
+		llamacppTokensPerSecond.WithLabelValues(defaultModel).Set(llamaCppLog.TokensPerSecond)
+		llamacppMemoryPerToken.WithLabelValues(defaultModel).Set(llamaCppLog.MemoryPerToken)
+		llamacppThreadsUsed.WithLabelValues(defaultModel).Set(float64(llamaCppLog.ThreadsUsed))
+		llamacppBatchSize.WithLabelValues(defaultModel).Set(float64(llamaCppLog.BatchSize))
 
 		w.WriteHeader(http.StatusOK)
 	})
@@ -527,7 +548,7 @@ func main() {
 	})
 
 	// Add chat endpoint with advanced tracing
-	mux.HandleFunc("/chat", handleChat(client, model, baseURL))
+	mux.HandleFunc("/chat", handleChat(client, defaultModel, baseURL))
 
 	// Create HTTP server
 	server := &http.Server{
@@ -589,7 +610,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 }
 
 // handleChat handles the chat endpoint with simple tracing
-func handleChat(client *openai.Client, model string, apiBaseURL string) http.HandlerFunc {
+func handleChat(client *openai.Client, defaultModel string, apiBaseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -619,6 +640,13 @@ func handleChat(client *openai.Client, model string, apiBaseURL string) http.Han
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
+		// Use the model specified in the request, or fall back to default model
+		modelToUse := defaultModel
+		if req.Model != "" {
+			modelToUse = req.Model
+			log.Printf("Using user-selected model: %s", modelToUse)
+		}
+
 		// Count input tokens (rough estimate)
 		inputTokens := 0
 		for _, msg := range req.Messages {
@@ -627,7 +655,7 @@ func handleChat(client *openai.Client, model string, apiBaseURL string) http.Han
 		inputTokens += len(req.Message) / 4
 		
 		// Track metrics for input tokens
-		chatTokensCounter.WithLabelValues("input", model).Add(float64(inputTokens))
+		chatTokensCounter.WithLabelValues("input", modelToUse).Add(float64(inputTokens))
 
 		// Start model timing
 		start := time.Now()
@@ -675,7 +703,7 @@ func handleChat(client *openai.Client, model string, apiBaseURL string) http.Han
 		
 		param := openai.ChatCompletionNewParams{
 			Messages: openai.F(messages),
-			Model:    openai.F(model),
+			Model:    openai.F(modelToUse),
 		}
 
 		// Set prompt evaluation start time for llama.cpp metrics
@@ -692,10 +720,10 @@ func handleChat(client *openai.Client, model string, apiBaseURL string) http.Han
 				firstTokenTime = time.Now()
 				
 				// For llama.cpp, record prompt evaluation time
-				if strings.Contains(strings.ToLower(model), "llama") || 
+				if strings.Contains(strings.ToLower(modelToUse), "llama") || 
 				   strings.Contains(apiBaseURL, "llama.cpp") {
 					promptEvalTime := firstTokenTime.Sub(promptEvalStartTime)
-					llamacppPromptEvalTime.WithLabelValues(model).Observe(promptEvalTime.Seconds())
+					llamacppPromptEvalTime.WithLabelValues(modelToUse).Observe(promptEvalTime.Seconds())
 				}
 			}
 
@@ -712,25 +740,25 @@ func handleChat(client *openai.Client, model string, apiBaseURL string) http.Han
 		}
 
 		// Calculate tokens per second for llama.cpp metrics
-		if strings.Contains(strings.ToLower(model), "llama") || 
+		if strings.Contains(strings.ToLower(modelToUse), "llama") || 
 		   strings.Contains(apiBaseURL, "llama.cpp") {
 			totalTime := time.Since(firstTokenTime).Seconds()
 			if totalTime > 0 && outputTokens > 0 {
 				tokensPerSecond := float64(outputTokens) / totalTime
-				llamacppTokensPerSecond.WithLabelValues(model).Set(tokensPerSecond)
+				llamacppTokensPerSecond.WithLabelValues(modelToUse).Set(tokensPerSecond)
 			}
 		}
 
 		// Record metrics
 		requestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(time.Since(start).Seconds())
 		requestCounter.WithLabelValues(r.Method, r.URL.Path, "200").Inc()
-		chatTokensCounter.WithLabelValues("output", model).Add(float64(outputTokens))
-		modelLatency.WithLabelValues(model, "inference").Observe(time.Since(modelStartTime).Seconds())
+		chatTokensCounter.WithLabelValues("output", modelToUse).Add(float64(outputTokens))
+		modelLatency.WithLabelValues(modelToUse, "inference").Observe(time.Since(modelStartTime).Seconds())
 		
 		if !firstTokenTime.IsZero() {
 			ttft := firstTokenTime.Sub(modelStartTime).Seconds()
 			log.Printf("Time to first token: %.3f seconds", ttft)
-			firstTokenLatency.WithLabelValues(model).Observe(ttft)
+			firstTokenLatency.WithLabelValues(modelToUse).Observe(ttft)
 		}
 
 		if err := stream.Err(); err != nil {
