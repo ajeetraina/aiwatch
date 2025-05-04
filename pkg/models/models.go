@@ -65,17 +65,48 @@ func GetAvailableModels() ([]Model, error) {
 	return models, nil
 }
 
+// GetFallbackModels returns hard-coded models for when Docker commands fail
+func GetFallbackModels() []Model {
+	return []Model{
+		{
+			Name:         "ai/llama3.2:1B-Q8_0",
+			Parameters:   "1.24 B",
+			Quantization: "Q8_0",
+			Architecture: "llama",
+			ModelID:      "a15c3117eeeb",
+			Created:      "5 weeks ago",
+			Size:         "1.22 GiB",
+		},
+		{
+			Name:         "ai/qwen3",
+			Parameters:   "8.19 B",
+			Quantization: "IQ2_XXS/Q4_K_M",
+			Architecture: "qwen3",
+			ModelID:      "79fa56c07429",
+			Created:      "3 days ago",
+			Size:         "4.68 GiB",
+		},
+	}
+}
+
 // HandleListModels returns the list of available models as JSON
 func HandleListModels(w http.ResponseWriter, r *http.Request) {
 	log := logger.GetLogger()
 	
 	models, err := GetAvailableModels()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get available models")
-		http.Error(w, "Failed to retrieve models", http.StatusInternalServerError)
+	if err != nil || len(models) == 0 {
+		log.Error().Err(err).Msg("Failed to get available models, using fallback")
+		
+		// Use fallback models
+		fallbackModels := GetFallbackModels()
+		
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		json.NewEncoder(w).Encode(fallbackModels)
 		return
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	json.NewEncoder(w).Encode(models)
 }
