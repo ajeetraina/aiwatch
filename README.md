@@ -1,9 +1,6 @@
-# GenAI App Demo with Docker Model Runner
-
-<img width="679" alt="image" src="https://github.com/user-attachments/assets/9b3931c2-aab3-421e-a3ca-990117ee545b" />
+# AIWatch - AI Model Management and Observability
 
 
-A modern, full-stack chat application demonstrating how to integrate React frontend with a Go backend and run local Large Language Models (LLMs) using Docker's Model Runner.
 
 ## Overview
 
@@ -15,6 +12,8 @@ This project showcases a complete Generative AI interface that includes:
 - **NEW: llama.cpp metrics integration directly in the UI**
 
 ## Features
+
+<img width="679" alt="image" src="https://github.com/user-attachments/assets/9b3931c2-aab3-421e-a3ca-990117ee545b" />
 
 - 💬 Interactive chat interface with message history
 - 🔄 Real-time streaming responses (tokens appear as they're generated)
