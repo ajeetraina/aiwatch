@@ -25,17 +25,43 @@ type Model struct {
 func GetAvailableModels() ([]Model, error) {
 	log := logger.GetLogger()
 	
+	// Debug logging
+	log.Info().Msg("Attempting to execute 'docker model ls' command")
+	
 	// Execute docker model ls command
 	cmd := exec.Command("docker", "model", "ls", "--format", "{{.NAME}}\t{{.PARAMETERS}}\t{{.QUANTIZATION}}\t{{.ARCHITECTURE}}\t{{.MODEL_ID}}\t{{.CREATED}}\t{{.SIZE}}")
 	output, err := cmd.CombinedOutput()
+	
+	// Log the output and any error for debugging
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to execute docker model ls command")
-		return nil, fmt.Errorf("failed to list docker models: %v", err)
+		log.Error().Err(err).Str("output", string(output)).Msg("Failed to execute docker model ls command")
+		
+		// Try basic docker command to check connectivity
+		checkCmd := exec.Command("docker", "version")
+		checkOutput, checkErr := checkCmd.CombinedOutput()
+		if checkErr != nil {
+			log.Error().Err(checkErr).Str("output", string(checkOutput)).Msg("Docker connectivity check failed")
+		} else {
+			log.Info().Msg("Docker connection verified but 'docker model ls' command failed")
+		}
+		
+		// Check for the docker executable
+		whichCmd := exec.Command("which", "docker")
+		whichOutput, whichErr := whichCmd.CombinedOutput()
+		if whichErr != nil {
+			log.Error().Err(whichErr).Msg("Docker executable not found in PATH")
+		} else {
+			log.Info().Str("path", strings.TrimSpace(string(whichOutput))).Msg("Docker executable found")
+		}
+		
+		return nil, fmt.Errorf("failed to list docker models: %v, output: %s", err, string(output))
 	}
 
 	// Parse the output
 	models := []Model{}
 	lines := strings.Split(string(output), "\n")
+	
+	log.Info().Str("output", string(output)).Msg("Docker model ls output")
 	
 	for _, line := range lines {
 		if line == "" {
