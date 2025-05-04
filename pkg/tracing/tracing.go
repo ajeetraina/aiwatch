@@ -73,7 +73,7 @@ func SetupTracing(serviceName string, otlpEndpoint string) (func(), error) {
 
 // StartSpan starts a new span
 func StartSpan(ctx context.Context, spanName string) (context.Context, otelTrace.Span) {
-	tracer := otel.Tracer("genai-app")
+	tracer := otel.Tracer("aiwatch")
 	ctx, span := tracer.Start(ctx, spanName)
 	return ctx, span
 }
@@ -152,7 +152,7 @@ func CreateEvent(ctx context.Context, name string, attrs ...attribute.KeyValue) 
 
 // StartChildSpan starts a child span from the current span
 func StartChildSpan(ctx context.Context, spanName string) (context.Context, otelTrace.Span) {
-	tracer := otel.Tracer("genai-app")
+	tracer := otel.Tracer("aiwatch")
 	ctx, span := tracer.Start(ctx, spanName)
 	return ctx, span
 }
