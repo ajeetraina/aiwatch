@@ -7,6 +7,8 @@ services:
     ports:
       - '8080:8080'
       - '9090:9090'  # Metrics port
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # Add Docker socket access
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:8080/health']
       interval: 3s
