@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"io"
 	"os"
 	"time"
 
@@ -9,79 +8,42 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Init initializes the global logger
-func Init(level string, pretty bool) {
-	// Set the global logger
+var logger zerolog.Logger
+
+// Initialize sets up the logger with the specified configuration
+func Initialize(logLevel string, prettyPrint bool) {
+	// Set the global time format
 	zerolog.TimeFieldFormat = time.RFC3339
-	zerolog.SetGlobalLevel(parseLevel(level))
 
-	var output io.Writer = os.Stdout
-	if pretty {
-		output = zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			TimeFormat: time.RFC3339,
+	// Set the global log level
+	level, err := zerolog.ParseLevel(logLevel)
+	if err != nil {
+		level = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(level)
+
+	// Configure the logger output
+	if prettyPrint {
+		output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
+		logger = zerolog.New(output).With().Timestamp().Caller().Logger()
+	} else {
+		logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	}
+
+	// Replace the global logger
+	log.Logger = logger
+}
+
+// GetLogger returns the configured logger instance
+func GetLogger() zerolog.Logger {
+	// If logger hasn't been initialized, use a default configuration
+	if logger.GetLevel() == zerolog.NoLevel {
+		logLevel := os.Getenv("LOG_LEVEL")
+		if logLevel == "" {
+			logLevel = "info"
 		}
+		prettyPrint := os.Getenv("LOG_PRETTY") == "true"
+		Initialize(logLevel, prettyPrint)
 	}
-
-	log.Logger = zerolog.New(output).With().Timestamp().Caller().Logger()
-}
-
-// parseLevel converts a string level to zerolog.Level
-func parseLevel(level string) zerolog.Level {
-	switch level {
-	case "debug":
-		return zerolog.DebugLevel
-	case "info":
-		return zerolog.InfoLevel
-	case "warn":
-		return zerolog.WarnLevel
-	case "error":
-		return zerolog.ErrorLevel
-	default:
-		return zerolog.InfoLevel
-	}
-}
-
-// Logger is a wrapper around zerolog.Logger
-type Logger struct {
-	logger zerolog.Logger
-}
-
-// New creates a new logger with the given context
-func New(component string) *Logger {
-	return &Logger{
-		logger: log.With().Str("component", component).Logger(),
-	}
-}
-
-// WithField adds a field to the logger
-func (l *Logger) WithField(key string, value interface{}) *Logger {
-	return &Logger{
-		logger: l.logger.With().Interface(key, value).Logger(),
-	}
-}
-
-// Debug logs a debug message
-func (l *Logger) Debug(msg string) {
-	l.logger.Debug().Msg(msg)
-}
-
-// Info logs an info message
-func (l *Logger) Info(msg string) {
-	l.logger.Info().Msg(msg)
-}
-
-// Warn logs a warning message
-func (l *Logger) Warn(msg string) {
-	l.logger.Warn().Msg(msg)
-}
-
-// Error logs an error message
-func (l *Logger) Error(msg string, err error) {
-	l.logger.Error().Err(err).Msg(msg)
-}
-
-// Fatal logs a fatal message and exits
-func (l *Logger) Fatal(msg string, err error) {
-	l.logger.Fatal().Err(err).Msg(msg)
+	return logger
 }
