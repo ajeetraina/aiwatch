@@ -14,7 +14,7 @@ This project showcases a complete Generative AI interface that includes:
 
 ## Features
 
-<img width="679" alt="image" src="https://github.com/user-attachments/assets/9b3931c2-aab3-421e-a3ca-990117ee545b" />
+<img width="972" alt="image" src="https://github.com/user-attachments/assets/99478fee-af88-4a8f-ace6-97b0143efaf0" />
 
 - 💬 Interactive chat interface with message history
 - 🔄 Real-time streaming responses (tokens appear as they're generated)
