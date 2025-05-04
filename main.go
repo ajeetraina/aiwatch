@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ajeetraina/aiwatch/pkg/logger"
 	"github.com/ajeetraina/aiwatch/pkg/middleware"
 	"github.com/ajeetraina/aiwatch/pkg/models"
 	"github.com/ajeetraina/aiwatch/pkg/tracing"
@@ -319,6 +320,15 @@ func main() {
 	baseURL := os.Getenv("BASE_URL")
 	defaultModel := os.Getenv("MODEL")
 	apiKey := os.Getenv("API_KEY")
+	
+	// Initialize logger
+	logLevel := getEnvOrDefault("LOG_LEVEL", "info")
+	logPretty, _ := strconv.ParseBool(getEnvOrDefault("LOG_PRETTY", "true"))
+	logger.Initialize(logLevel, logPretty)
+	
+	// Get logger
+	log := logger.GetLogger()
+	log.Info().Msg("Logger initialized successfully")
 
 	// Tracing setup
 	tracingEnabled, _ := strconv.ParseBool(getEnvOrDefault("TRACING_ENABLED", "false"))
@@ -326,15 +336,15 @@ func main() {
 
 	if tracingEnabled {
 		otlpEndpoint := getEnvOrDefault("OTLP_ENDPOINT", "jaeger:4318")
-		log.Printf("Setting up tracing with endpoint: %s", otlpEndpoint)
+		log.Info().Str("endpoint", otlpEndpoint).Msg("Setting up tracing")
 
 		cleanup, err := tracing.SetupTracing("aiwatch", otlpEndpoint)
 		if err != nil {
-			log.Printf("Failed to set up tracing: %v", err)
+			log.Error().Err(err).Msg("Failed to set up tracing")
 		} else {
 			tracingCleanup = cleanup
 			defer tracingCleanup()
-			log.Println("Tracing initialized successfully")
+			log.Info().Msg("Tracing initialized successfully")
 		}
 	}
 
@@ -565,17 +575,17 @@ func main() {
 	}
 	
 	go func() {
-		log.Println("Starting metrics server on :9090")
+		log.Info().Str("addr", ":9090").Msg("Starting metrics server")
 		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start metrics server: %v", err)
+			log.Fatal().Err(err).Msg("Failed to start metrics server")
 		}
 	}()
 
 	// Start the main server
 	go func() {
-		log.Println("Starting server on :8080")
+		log.Info().Str("addr", ":8080").Msg("Starting server")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
@@ -583,7 +593,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	log.Info().Msg("Shutting down server...")
 
 	// Shutdown the server with a timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -591,13 +601,13 @@ func main() {
 
 	// Shutdown servers
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Fatal().Err(err).Msg("Server forced to shutdown")
 	}
 	if err := metricsServer.Shutdown(ctx); err != nil {
-		log.Fatalf("Metrics server forced to shutdown: %v", err)
+		log.Fatal().Err(err).Msg("Metrics server forced to shutdown")
 	}
 
-	log.Println("Server exiting")
+	log.Info().Msg("Server exiting")
 }
 
 // getEnvOrDefault gets an environment variable or returns a default value
@@ -612,6 +622,8 @@ func getEnvOrDefault(key, defaultValue string) string {
 // handleChat handles the chat endpoint with simple tracing
 func handleChat(client *openai.Client, defaultModel string, apiBaseURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log := logger.GetLogger()
+		
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -628,7 +640,7 @@ func handleChat(client *openai.Client, defaultModel string, apiBaseURL string) h
 
 		var req ChatRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			log.Printf("Invalid request body: %v", err)
+			log.Error().Err(err).Msg("Invalid request body")
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			requestCounter.WithLabelValues(r.Method, r.URL.Path, fmt.Sprintf("%d", http.StatusBadRequest)).Inc()
 			return
@@ -644,7 +656,7 @@ func handleChat(client *openai.Client, defaultModel string, apiBaseURL string) h
 		modelToUse := defaultModel
 		if req.Model != "" {
 			modelToUse = req.Model
-			log.Printf("Using user-selected model: %s", modelToUse)
+			log.Info().Str("model", modelToUse).Msg("Using user-selected model")
 		}
 
 		// Count input tokens (rough estimate)
@@ -732,7 +744,7 @@ func handleChat(client *openai.Client, defaultModel string, apiBaseURL string) h
 				outputTokens++
 				_, err := fmt.Fprintf(w, "%s", chunk.Choices[0].Delta.Content)
 				if err != nil {
-					log.Printf("Error writing to stream: %v", err)
+					log.Error().Err(err).Msg("Error writing to stream")
 					return
 				}
 				w.(http.Flusher).Flush()
@@ -757,12 +769,12 @@ func handleChat(client *openai.Client, defaultModel string, apiBaseURL string) h
 		
 		if !firstTokenTime.IsZero() {
 			ttft := firstTokenTime.Sub(modelStartTime).Seconds()
-			log.Printf("Time to first token: %.3f seconds", ttft)
+			log.Info().Float64("seconds", ttft).Msg("Time to first token")
 			firstTokenLatency.WithLabelValues(modelToUse).Observe(ttft)
 		}
 
 		if err := stream.Err(); err != nil {
-			log.Printf("Error in stream: %v", err)
+			log.Error().Err(err).Msg("Error in stream")
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
