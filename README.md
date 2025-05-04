@@ -1,5 +1,14 @@
 # AIWatch - AI Model Management and Observability powered by Docker Model Runner
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://github.com/ajeetraina/aiwatch)
+[![Llama.cpp](https://img.shields.io/badge/Llama.cpp-Integrated-orange)](https://github.com/ggerganov/llama.cpp)
+[![Go Version](https://img.shields.io/badge/Go-1.19+-00ADD8.svg)](https://golang.org/)
+[![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-Enabled-success)](https://opentelemetry.io/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![Prometheus](https://img.shields.io/badge/Prometheus-Monitored-red)](https://prometheus.io/)
+[![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800)](https://grafana.com/)
+
 <img width="1206" alt="image" src="https://github.com/user-attachments/assets/349aecf6-bd94-47a4-810f-2744d92a997a" />
 
 
@@ -49,6 +58,56 @@ The application consists of these main components:
 └─────────────┘     └─────────────┘     └─────────────┘
       :3001              :9091              :16686
 ```
+
+## Observability Stack
+
+The AIWatch project includes a comprehensive observability stack designed to provide full visibility into your AI model's performance:
+
+### Metrics
+- **Prometheus**: Collection and storage of time-series metrics data
+- **Grafana**: Visualization of metrics through customizable dashboards
+- **Custom metrics endpoints**: `/metrics/summary`, `/metrics/log`, and `/metrics/error`
+
+### Logging
+- **Structured JSON logs**: Using zerolog for efficient parsing and querying
+- **Contextual information**: Request IDs, component names, and durations
+- **Log levels**: debug, info, warn, error, fatal with configurable verbosity
+
+### Tracing
+- **OpenTelemetry**: Industry-standard distributed tracing
+- **Jaeger UI**: Visual exploration of request flows and performance bottlenecks
+- **Span context propagation**: End-to-end request tracking
+
+### Health Checks
+- **Endpoint health**: `/health` for basic status checks
+- **Readiness probes**: `/readiness` for Kubernetes integration
+- **Memory stats**: Runtime memory usage monitoring
+
+## llama.cpp Metrics Integration
+
+The AIWatch platform provides detailed real-time metrics specifically for llama.cpp models:
+
+| Metric | Description | Prometheus Metric Name |
+|--------|-------------|------------------------|
+| Tokens per Second | Measure of model generation speed | `genai_app_llamacpp_tokens_per_second` |
+| Context Window Size | Maximum context length in tokens | `genai_app_llamacpp_context_size` |
+| Prompt Evaluation Time | Time spent processing input prompt | `genai_app_llamacpp_prompt_eval_seconds` |
+| Memory per Token | Memory efficiency measurement | `genai_app_llamacpp_memory_per_token_bytes` |
+| Thread Utilization | Number of CPU threads used | `genai_app_llamacpp_threads_used` |
+| Batch Size | Token processing batch size | `genai_app_llamacpp_batch_size` |
+
+These metrics help optimize model performance and identify bottlenecks in your inference pipeline.
+
+## Grafana Dashboards
+
+The platform includes pre-configured Grafana dashboards for monitoring:
+
+- **LLM Performance**: Overall model performance metrics
+- **API Health**: Backend API performance and errors
+- **llama.cpp Metrics**: Detailed llama.cpp-specific performance data
+- **Resource Utilization**: CPU, memory, and system resource tracking
+
+Access the dashboards at [http://localhost:3001](http://localhost:3001) after deployment.
 
 ## Connection Methods
 
