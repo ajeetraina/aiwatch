@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -316,6 +317,15 @@ func getLlamaCppMetrics(model string) *LlamaCppMetrics {
 func main() {
 	log.Println("Starting AIWatch with observability")
 
+	// Print Docker version for debugging
+	dockerVersionCmd := exec.Command("docker", "--version")
+	dockerVersionOut, err := dockerVersionCmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Warning: Docker CLI check failed: %v", err)
+	} else {
+		log.Printf("Docker CLI check: %s", string(dockerVersionOut))
+	}
+
 	// Get configuration from environment
 	baseURL := os.Getenv("BASE_URL")
 	defaultModel := os.Getenv("MODEL")
@@ -394,6 +404,25 @@ func main() {
 		}
 
 		models.HandleListModels(w, r)
+	})
+
+	// Add Docker debug endpoint
+	mux.HandleFunc("/debug/docker", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		models.HandleDebugDocker(w, r)
 	})
 
 	// Add health check endpoint
