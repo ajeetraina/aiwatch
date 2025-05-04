@@ -43,4 +43,20 @@ export interface ModelMetadata {
   contextWindow?: number;
   modelType?: string;
   parameters?: string;
+  quantization?: string;
+  architecture?: string;
+  modelId?: string;
+  created?: string;
+  size?: string;
+}
+
+// Docker model from API
+export interface DockerModel {
+  name: string;
+  parameters: string;
+  quantization: string;
+  architecture: string; 
+  modelId: string;
+  created: string;
+  size: string;
 }
