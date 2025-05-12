@@ -9,7 +9,7 @@
 [![Prometheus](https://img.shields.io/badge/Prometheus-Monitored-red)](https://prometheus.io/)
 [![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800)](https://grafana.com/)
 
-<img width="1206" alt="image" src="https://github.com/user-attachments/assets/349aecf6-bd94-47a4-810f-2744d92a997a" />
+<img width="932" alt="image" src="https://github.com/user-attachments/assets/869dc88c-fb9a-4f25-ba7a-acec2d2c8984" />
 
 
 ## Overview
